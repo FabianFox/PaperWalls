@@ -41,3 +41,6 @@ vignettes/*.pdf
 # Data
 data/*.xls
 data/*.xlsx
+
+# Text
+text/
