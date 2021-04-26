@@ -3,11 +3,12 @@
 # Load/install packages
 ### ------------------------------------------------------------------------ ###
 if (!require("xfun")) install.packages("xfun")
-pkg_attach2("tidyverse", "rio", "janitor", "fs")
+pkg_attach2("tidyverse", "rio", "janitor", "fs", "countrycode")
 
 # Notes
-# Types of visas: 
+# Visa categories:
 # - A: airport transit visa (ATV)
+# - B (defunct): transit visa (over land)
 # - C: uniform visa (single entry) or MEV (multiple entry visa)
 # - LTV: limited territorial validity
 
@@ -26,13 +27,17 @@ files.df <- tibble(
                                            "share_mev_of_total_uniform_visa_issued", 
                                            "total_limited_visa_issued", 
                                            "num_uniform_visa_not_issued", 
-                                           "rejection_rate_uniform_visa"))))
+                                           "rejection_rate_uniform_visa"))),
+         cutpoint = c(1963, 1943, 1881, 1872, 1901, 1835)) %>%
+  mutate(data = map2(data, cutpoint, ~.x %>%
+                      filter(row_number() < .y))) %>%
+  select(-cutpoint)
   
 # Data for 2013
-file2013.df <- tibble(
+files2013.df <- tibble(
   names = dir_ls("./data")) %>%
   mutate(year = strtoi(str_extract(names, "[:digit:]{4}"))) %>%
-  filter(!is.na(year), year == 2013, str_detect(names, "synthese")) %>%
+  filter(!is.na(year), year == 2013) %>%
   mutate(data = map(names, ~import(.x, sheet = 1))) %>%
   mutate(data = map(data, ~.x %>%
                       select(1:3, 9:15) %>%
@@ -43,14 +48,17 @@ file2013.df <- tibble(
                                            "share_mev_of_total_uniform_visa_issued", 
                                            "total_limited_visa_issued", 
                                            "num_uniform_visa_not_issued", 
-                                           "rejection_rate_uniform_visa"))))
+                                           "rejection_rate_uniform_visa"))),
+         cutpoint = 1992) %>%
+  mutate(data = map2(data, cutpoint, ~.x %>%
+                       filter(row_number() < .y))) %>%
+  select(-cutpoint)
 
-# Data for 2010 - 2012
-# Data for 2013
-file2011_2012.df <- tibble(
+# Data for 2011 - 2012
+files2011_2012.df <- tibble(
   names = dir_ls("./data")) %>%
   mutate(year = strtoi(str_extract(names, "[:digit:]{4}"))) %>%
-  filter(!is.na(year), between(year, 2011, 2012), str_detect(names, "synthese")) %>%
+  filter(!is.na(year), between(year, 2011, 2012)) %>%
   mutate(data = map(names, ~import(.x, sheet = 1))) %>%
   mutate(data = map(data, ~.x %>%
                       select(1, 3:4, 12, 9:11, 18, 13) %>%
@@ -61,6 +69,69 @@ file2011_2012.df <- tibble(
                                            "total_uniform_visa_issued", "num_mev_visa_issued",
                                            "share_mev_of_total_uniform_visa_issued", 
                                            "total_limited_visa_issued", 
-                                           "num_uniform_visa_not_issued")))) %>%
+                                           "num_uniform_visa_not_issued"))),
+         cutpoint = c(2071, 2024)) %>%
+  mutate(data = map2(data, cutpoint, ~.x %>%
+                       filter(row_number() < .y))) %>%
+  select(-cutpoint) %>%
   mutate(data = map(data, ~.x %>% 
                       mutate(rejection_rate_uniform_visa = num_uniform_visa_not_issued / num_uniform_visa_applied)))
+
+# Data for 2010
+files2010.df <- tibble(
+  names = dir_ls("./data")) %>%
+  mutate(year = strtoi(str_extract(names, "[:digit:]{4}"))) %>%
+  filter(!is.na(year), year == 2010) %>%
+  mutate(data = map(names, ~import(.x, sheet = 1))) %>%
+  mutate(data = map(data, ~.x %>%
+                      select(3, 1:2, 10, 7:9, 15) %>%
+                      clean_names())) %>%
+  mutate(data = map(data, ~set_names(.x, c("schengen_state", "application_country",
+                                           "consulate_location", "num_uniform_visa_applied", 
+                                           "total_uniform_visa_issued", "num_mev_visa_issued",
+                                           "share_mev_of_total_uniform_visa_issued", 
+                                           "total_limited_visa_issued"))),
+         cutpoint = 2198) %>%
+  mutate(data = map2(data, cutpoint, ~.x %>%
+                       filter(row_number() < .y))) %>%
+  select(-cutpoint) %>%
+  mutate(data = map(data, ~.x %>% 
+                      mutate(num_uniform_visa_not_issued = num_uniform_visa_applied - (total_uniform_visa_issued + total_limited_visa_issued),
+                             rejection_rate_uniform_visa = num_uniform_visa_not_issued / num_uniform_visa_applied,
+                             schengen_state = countrycode(schengen_state, "eurostat", "country.name.en"))))
+
+# Data for 2009
+# Data in different format; needs further clarification
+
+# Join datasets, unnest, clean
+### ------------------------------------------------------------------------ ###
+visa.df <- files.df %>%
+  bind_rows(files2013.df, files2011_2012.df, files2010.df) %>%
+  select(-names) %>%
+  unnest(data)
+
+# Further cleaning
+visa.df <- visa.df %>%
+  mutate(across(where(is_character), str_to_title),
+         across(c(schengen_state, application_country), ~countrycode(., "country.name.en", "iso3c", custom_match = c("Kosovo" = "XKX"))))
+
+# Subset to countries that implemented the Schengen Agreement
+# created in: GetSchengenMembership.R
+schengen.df <- import("./data/SchengenMembership.rds")
+
+# Remove visa applications from within the Schengen Area
+visa.df <- visa.df %>%
+  filter(!application_country %in% schengen.df$iso3_state)
+
+# 
+visa.df <- visa.df %>%
+  group_by(schengen_state, year, application_country) %>%
+  select(schengen_state, year, num_uniform_visa_not_issued, num_uniform_visa_applied) %>%
+  summarise(across(where(is.numeric), ~sum(., na.rm = TRUE)))
+
+# 
+visa.df <- visa.df %>%
+  mutate(rejection_rate = num_uniform_visa_not_issued / num_uniform_visa_applied * 100) %>%
+  arrange(desc(rejection_rate))
+
+
