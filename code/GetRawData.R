@@ -17,11 +17,12 @@ url <- "https://ec.europa.eu/home-affairs/what-we-do/policies/borders-and-visas/
 page <- read_html(url)
 
 # Locate href to .xlsx
-# also gets a document on consular representations
+# also gets a document on the location of consulates, but not on external border
 links.df <- tibble(
   links = html_nodes(page, xpath = ".//a[contains(@href, '.xls')]") %>% 
     html_attr("href"),
-  name = flatten_chr(str_extract_all(links, "(?<=docs/|pdf/).+")))
+  name = flatten_chr(str_extract_all(links, "(?<=docs/|pdf/).+"))) %>%
+  filter(!str_detect(links, "bcps"))
 
 # Download
 map2(links.df$links, links.df$name, ~download.file(url = .x, 
