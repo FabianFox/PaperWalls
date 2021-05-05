@@ -16,7 +16,8 @@ pkg_attach2("tidyverse", "rio", "janitor", "fs", "countrycode")
 files.df <- tibble(
   names = dir_ls("./data")) %>%
   mutate(year = strtoi(str_extract(names, "[:digit:]{4}"))) %>%
-  filter(!is.na(year), between(year, 2014, 2019), str_detect(names, "consulates")) %>%
+  filter(!is.na(year), between(year, 2014, 2019), str_detect(names, "consulates"),
+         str_detect(names, "xls|xlsx")) %>%
   mutate(data = map(names, ~import(.x, sheet = 2))) %>%
   mutate(data = map(data, ~.x %>%
                       select(1:3, 9:15) %>%
@@ -28,7 +29,8 @@ files.df <- tibble(
                                            "total_limited_visa_issued", 
                                            "num_uniform_visa_not_issued", 
                                            "rejection_rate_uniform_visa"))),
-         cutpoint = c(1963, 1943, 1881, 1872, 1901, 1835)) %>%
+         # end of relevant table (multiple table per sheet)
+         cutpoint = c(1963, 1943, 1881, 1872, 1901, 1835)) %>% 
   mutate(data = map2(data, cutpoint, ~.x %>%
                       filter(row_number() < .y))) %>%
   select(-cutpoint)
@@ -37,7 +39,8 @@ files.df <- tibble(
 files2013.df <- tibble(
   names = dir_ls("./data")) %>%
   mutate(year = strtoi(str_extract(names, "[:digit:]{4}"))) %>%
-  filter(!is.na(year), year == 2013) %>%
+  filter(!is.na(year), year == 2013,
+         str_detect(names, "xls|xlsx")) %>%
   mutate(data = map(names, ~import(.x, sheet = 1))) %>%
   mutate(data = map(data, ~.x %>%
                       select(1:3, 9:15) %>%
@@ -58,7 +61,8 @@ files2013.df <- tibble(
 files2011_2012.df <- tibble(
   names = dir_ls("./data")) %>%
   mutate(year = strtoi(str_extract(names, "[:digit:]{4}"))) %>%
-  filter(!is.na(year), between(year, 2011, 2012)) %>%
+  filter(!is.na(year), between(year, 2011, 2012),
+         str_detect(names, "xls|xlsx")) %>%
   mutate(data = map(names, ~import(.x, sheet = 1))) %>%
   mutate(data = map(data, ~.x %>%
                       select(1, 3:4, 12, 9:11, 18, 13) %>%
@@ -81,7 +85,8 @@ files2011_2012.df <- tibble(
 files2010.df <- tibble(
   names = dir_ls("./data")) %>%
   mutate(year = strtoi(str_extract(names, "[:digit:]{4}"))) %>%
-  filter(!is.na(year), year == 2010) %>%
+  filter(!is.na(year), year == 2010, 
+         str_detect(names, "xls|xlsx")) %>%
   mutate(data = map(names, ~import(.x, sheet = 1))) %>%
   mutate(data = map(data, ~.x %>%
                       select(3, 1:2, 10, 7:9, 15) %>%
@@ -123,15 +128,28 @@ schengen.df <- import("./data/SchengenMembership.rds")
 visa.df <- visa.df %>%
   filter(!application_country %in% schengen.df$iso3_state)
 
-# 
+# The documents provide a rejection rate calculated as:  visa not issued / visa applied
+# Hobolth (2014) defines it as "the number of refusals divided by the total number of 
+# decisions (refused plus issued)." (p. 429)
+
+# Sample with full information by country
 visa.df <- visa.df %>%
-  group_by(schengen_state, year, application_country) %>%
-  select(schengen_state, year, num_uniform_visa_not_issued, num_uniform_visa_applied) %>%
-  summarise(across(where(is.numeric), ~sum(., na.rm = TRUE)))
+  group_by(schengen_state, application_country, year) %>%
+  filter(!any(is.na(c(num_uniform_visa_not_issued, 
+                      num_uniform_visa_applied)))) %>%
+  ungroup()
 
-# 
+# Create the refusal rate by countries (aggregating consulate data)
 visa.df <- visa.df %>%
-  mutate(rejection_rate = num_uniform_visa_not_issued / num_uniform_visa_applied * 100) %>%
-  arrange(desc(rejection_rate))
+  select(schengen_state, application_country, year, num_uniform_visa_not_issued, 
+         num_uniform_visa_applied) %>%
+  group_by(schengen_state, application_country, year) %>%
+  summarise(across(where(is.numeric), ~sum(., na.rm = TRUE))) %>%
+  ungroup() %>%
+  mutate(refusal_rate = num_uniform_visa_not_issued / num_uniform_visa_applied)
 
+# Arrange
+visa.df %>%
+  arrange(desc(refusal_rate))
 
+# Remove negative and Inf refusal rates
