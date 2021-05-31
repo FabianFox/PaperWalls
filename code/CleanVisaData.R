@@ -110,6 +110,7 @@ files2010.df <- tibble(
 
 # Join datasets, unnest, clean
 ### ------------------------------------------------------------------------ ###
+# Data for 2010 - 2019
 visa.df <- files.df %>%
   bind_rows(files2013.df, files2011_2012.df, files2010.df) %>%
   select(-names) %>%
@@ -118,7 +119,9 @@ visa.df <- files.df %>%
 # Further cleaning
 visa.df <- visa.df %>%
   mutate(across(where(is_character), str_to_title),
-         across(c(schengen_state, application_country), ~countrycode(., "country.name.en", "iso3c", custom_match = c("Kosovo" = "XKX"))))
+         across(c(schengen_state, application_country), 
+                ~countrycode(., "country.name.en", "iso3c", 
+                             custom_match = c("Kosovo" = "XKX"))))
 
 # Subset to countries that implemented the Schengen Agreement
 # created in: GetSchengenMembership.R
@@ -128,7 +131,7 @@ schengen.df <- import("./data/SchengenMembership.rds")
 visa.df <- visa.df %>%
   filter(!application_country %in% schengen.df$iso3_state)
 
-# The documents provide a rejection rate calculated as:  visa not issued / visa applied
+# The tables provide a rejection rate calculated as: visa not issued / visa applied
 # Hobolth (2014) defines it as "the number of refusals divided by the total number of 
 # decisions (refused plus issued)." (p. 429)
 
@@ -138,6 +141,9 @@ visa.df <- visa.df %>%
   filter(!any(is.na(c(num_uniform_visa_not_issued, 
                       num_uniform_visa_applied)))) %>%
   ungroup()
+
+# Remove data that exceeds logical range
+#
 
 # Create the refusal rate by countries (aggregating consulate data)
 visa.df <- visa.df %>%
@@ -153,3 +159,21 @@ visa.df %>%
   arrange(desc(refusal_rate))
 
 # Remove negative and Inf refusal rates
+#
+
+# Regions
+visa.df <- visa.df %>%
+  mutate(application_continent = countrycode(application_country,
+                                          "iso3c", "continent", 
+                                          custom_match = c("XKX" = "Europe")))
+
+# Explorative data analysis
+visa_region.df <- visa.df %>%
+  group_by(application_continent, year) %>%
+  summarise(mean_refusal_rate = mean(refusal_rate)) %>%
+  filter(!is.na(mean_refusal_rate) & !is.nan(mean_refusal_rate) & mean_refusal_rate >= 0)
+
+ggplot(visa_region.df, aes(x = factor(year), y = mean_refusal_rate, group = application_continent, colour = application_continent)) +
+  geom_point(stat = "identity") +
+  geom_line() +
+  theme_minimal()
