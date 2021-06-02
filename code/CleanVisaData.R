@@ -1,5 +1,9 @@
 # Read data on visa issuance, rejections and applications
 
+# Notes/issues
+# - empty cells in 'rejection_rate_uniform_visa' are turned into 0.0 not NA
+# - check whether computation of rejection rate varies between tables
+
 # Load/install packages
 ### ------------------------------------------------------------------------ ###
 if (!require("xfun")) install.packages("xfun")
@@ -105,7 +109,7 @@ files2010.df <- files.df %>%
 # Join datasets, unnest, clean
 ### ------------------------------------------------------------------------ ###
 # Data for 2010 - 2020
-visa.df <- files2014f. %>%
+visa.df <- files2014f.df %>%
   bind_rows(files2013.df, files2011f.df, files2010.df) %>%
   select(-names) %>%
   unnest(data)
