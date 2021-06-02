@@ -21,8 +21,8 @@ page <- read_html(url)
 links.df <- tibble(
   links = html_nodes(page, xpath = ".//a[contains(@href, '.xls')]") %>% 
     html_attr("href"),
-  name = flatten_chr(str_extract_all(links, "(?<=docs/|pdf/).+"))) %>%
-  filter(!str_detect(links, "bcps"))
+  name = paste0("visa_statistics_", str_extract_all(links, "[:digit:]{4}"), ".xlsx")) %>%
+  filter(!str_detect(links, "bcps|external_border_crossing|list_of_consular_presence"))
 
 # Download
 map2(links.df$links, links.df$name, ~download.file(url = .x, 
