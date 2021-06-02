@@ -12,12 +12,15 @@ pkg_attach2("tidyverse", "rio", "janitor", "fs", "countrycode")
 # - C: uniform visa (single entry) or MEV (multiple entry visa)
 # - LTV: limited territorial validity
 
-# Data from 2014 - 2019
+# All available tables 2009 - 2020
 files.df <- tibble(
   names = dir_ls("./data")) %>%
-  mutate(year = strtoi(str_extract(names, "[:digit:]{4}"))) %>%
-  filter(!is.na(year), between(year, 2014, 2019), str_detect(names, "consulates"),
-         str_detect(names, "xls|xlsx")) %>%
+  filter(str_detect(names, "visa_statistics_[:digit:]{4}")) %>%
+  mutate(year = strtoi(str_extract(names, "[:digit:]{4}")))
+
+# 2014 - 2020
+files2014f.df <- files.df %>%
+  filter(between(year, 2014, 2020)) %>%
   mutate(data = map(names, ~import(.x, sheet = 2))) %>%
   mutate(data = map(data, ~.x %>%
                       select(1:3, 9:15) %>%
@@ -30,17 +33,14 @@ files.df <- tibble(
                                            "num_uniform_visa_not_issued", 
                                            "rejection_rate_uniform_visa"))),
          # end of relevant table (multiple table per sheet)
-         cutpoint = c(1963, 1943, 1881, 1872, 1901, 1835)) %>% 
+         cutpoint = c(1963, 1943, 1881, 1872, 1901, 1835, 1706)) %>% 
   mutate(data = map2(data, cutpoint, ~.x %>%
                       filter(row_number() < .y))) %>%
   select(-cutpoint)
   
 # Data for 2013
-files2013.df <- tibble(
-  names = dir_ls("./data")) %>%
-  mutate(year = strtoi(str_extract(names, "[:digit:]{4}"))) %>%
-  filter(!is.na(year), year == 2013,
-         str_detect(names, "xls|xlsx")) %>%
+files2013.df <- files.df %>%
+  filter(year == 2013) %>%
   mutate(data = map(names, ~import(.x, sheet = 1))) %>%
   mutate(data = map(data, ~.x %>%
                       select(1:3, 9:15) %>%
@@ -58,11 +58,8 @@ files2013.df <- tibble(
   select(-cutpoint)
 
 # Data for 2011 - 2012
-files2011_2012.df <- tibble(
-  names = dir_ls("./data")) %>%
-  mutate(year = strtoi(str_extract(names, "[:digit:]{4}"))) %>%
-  filter(!is.na(year), between(year, 2011, 2012),
-         str_detect(names, "xls|xlsx")) %>%
+files2011f.df <- files.df %>%
+  filter(!is.na(year), between(year, 2011, 2012)) %>%
   mutate(data = map(names, ~import(.x, sheet = 1))) %>%
   mutate(data = map(data, ~.x %>%
                       select(1, 3:4, 12, 9:11, 18, 13) %>%
@@ -82,11 +79,8 @@ files2011_2012.df <- tibble(
                       mutate(rejection_rate_uniform_visa = num_uniform_visa_not_issued / num_uniform_visa_applied)))
 
 # Data for 2010
-files2010.df <- tibble(
-  names = dir_ls("./data")) %>%
-  mutate(year = strtoi(str_extract(names, "[:digit:]{4}"))) %>%
-  filter(!is.na(year), year == 2010, 
-         str_detect(names, "xls|xlsx")) %>%
+files2010.df <- files.df %>%
+  filter(year == 2010) %>%
   mutate(data = map(names, ~import(.x, sheet = 1))) %>%
   mutate(data = map(data, ~.x %>%
                       select(3, 1:2, 10, 7:9, 15) %>%
@@ -110,9 +104,9 @@ files2010.df <- tibble(
 
 # Join datasets, unnest, clean
 ### ------------------------------------------------------------------------ ###
-# Data for 2010 - 2019
-visa.df <- files.df %>%
-  bind_rows(files2013.df, files2011_2012.df, files2010.df) %>%
+# Data for 2010 - 2020
+visa.df <- files2014f. %>%
+  bind_rows(files2013.df, files2011f.df, files2010.df) %>%
   select(-names) %>%
   unnest(data)
 
