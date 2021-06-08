@@ -65,7 +65,8 @@ world.shp <- rnaturalearth::ne_countries(scale = "medium", returnclass = "sf")
 
 # Aggregate EU
 world.shp <- world.shp %>%
-  filter(type %in% c("Sovereign country", "Country")) %>%
+  filter(type %in% c("Sovereign country", "Country"),
+         !name %in% c("Greenland")) %>%
   mutate(
     eu = case_when(
       iso_a3_eh %in% schengen.df$iso3_state ~ "EU",
@@ -81,7 +82,6 @@ world.shp <- world.shp %>%
 # Find centroids
 ctr.df <- st_centroid(world.shp)
 
-# 
 # Get countries
 countries <- ctr.df %>%
   rename(country_iso3 = eu) %>%
@@ -104,15 +104,30 @@ edges.df <- visa.df %>%
   filter(destination_iso3 == "EU" & visa_requirement_binary == 1) %>%
   select(from = destination_iso3, to = nationality_iso3)
 
+# Join world map with visa data
+world.shp <- world.shp %>%
+  left_join(y = visa.df %>%
+              filter(destination_iso3 == "EU") %>%
+              select(nationality_iso3, visa_requirement_binary), by = c("eu" = "nationality_iso3")) %>%
+  mutate(visa_requirement = case_when(
+    eu == "EU" ~ "EU",
+    visa_requirement_binary == 0 | is.na(visa_requirement_binary) ~ "visa required",
+    visa_requirement_binary == 1 ~ "visa not required",
+    TRUE ~ NA_character_
+  ))
+
 # Graph object
 graph.df <- graph_from_data_frame(d = edges.df, vertices = nodes.df, directed = TRUE)
 
 # Plot graph and geom_sf
 ggraph(graph = graph.df, layout = "manual", x = x, y = y) +
-  geom_sf(data = world.shp$geometry) +
+  geom_sf(data = world.shp$geometry,
+          aes(fill = factor(world.shp$visa_requirement)), 
+          show.legend = FALSE) +
   geom_edge_parallel(start_cap = circle(2, "mm"), 
                      end_cap = circle(0, "mm"),
                      arrow = arrow(type = "closed", 
                                    length = unit(1.5, "mm")),
                      sep = unit(5, "mm")) +
+  scale_fill_manual(values = c("#f0f0f0", "#636363", "#cccccc")) +
   theme_graph()
