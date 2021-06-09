@@ -1,8 +1,6 @@
 # Read data on visa issuance, rejections and applications
 
 # Notes/issues
-# - empty cells in 'rejection_rate_uniform_visa' are turned into 0.0 not NA
-# - check whether computation of rejection rate varies between tables
 
 # Load/install packages
 ### ------------------------------------------------------------------------ ###
