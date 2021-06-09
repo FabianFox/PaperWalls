@@ -9,6 +9,7 @@ pkg_attach2("tidyverse", "rio", "janitor", "fs", "countrycode", "sf",
 # Notes
 
 # Load data on visa requirements
+# created in Repository "Visa" in file Visa_Scraper.R and CreateVisaNetworkData2020.R
 ### ------------------------------------------------------------------------ ###
 visa.df <- import("./data/visa_2020.rds")
 
@@ -27,6 +28,7 @@ visa.df <- visa.df %>%
   filter(!(destination_iso3 == "EU" & nationality_iso3 == "EU")) 
 
 # Compute in-/ and outdegree
+# Note: Check countrycode for Kosovo (XKX or RKS)
 ### ------------------------------------------------------------------------ ###
 # Outdegree
 visa_outdegree.df <- visa.df %>%
