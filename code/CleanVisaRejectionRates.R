@@ -81,4 +81,5 @@ visa_reject_long.df <- visa_reject_long.df %>%
                                                "TWN" = "East Asia & Pacific")))
 
 # Export
+### ------------------------------------------------------------------------ ###
 export(visa_reject_long.df, "./data/visa_rejection_2015-2020.rds")
