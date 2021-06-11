@@ -20,7 +20,8 @@ schengen.df <- import("./data/SchengenMembership.rds")
 visa_rejection.df <- visa_rejection.df %>%
   filter(across(everything(), ~!is.na(.x)))
 
-# Remove states that are exempted from visa requirements
+# Join data on visa requirements
+### ------------------------------------------------------------------------ ###
 visa.df <- import("./data/visa_requirements_2020.rds") %>%
   filter(destination_iso3 == "EU") 
 
