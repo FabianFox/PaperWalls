@@ -74,7 +74,6 @@ world.shp <- world.shp %>%
                                               "<40%", "<50%", ">50%",
                                               "Visa-free entry", "Schengen area",
                                               "No data")))
-
 # Plot
 ### ------------------------------------------------------------------------ ###
 ggplot(world.shp) +
