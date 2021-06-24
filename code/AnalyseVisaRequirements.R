@@ -4,11 +4,24 @@
 ### ------------------------------------------------------------------------ ###
 if (!require("xfun")) install.packages("xfun")
 pkg_attach2("tidyverse", "rio", "countrycode", "sf", "ggraph", "tidygraph", 
-            "igraph")
+            "igraph", "extrafont")
+
+# theme
+theme_basic <- theme_minimal() +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    text = element_text(size = 16, family = "Garamond"),
+    axis.ticks.x = element_line(size = .5),
+  )
 
 # Load data
 ### ------------------------------------------------------------------------ ###
+# Visa requirements
 visa.df <- import("./data/visa_requirements_2020.rds")
+
+# created in: GetSchengenMembership.R
+schengen.df <- import("./data/SchengenMembership.rds")
 
 # Compute in-/ and outdegree
 # Note: Check countrycode for Kosovo (XKX or RKS)
@@ -30,18 +43,29 @@ visa_degree.df <- visa_outdegree.df %>%
 
 # Scatterplot: In-/outdegree
 ### ------------------------------------------------------------------------ ###
-ggplot(visa_degree.df, aes(x = outdegree, y = indegree)) +
+eu_data <- visa_degree.df %>% 
+  filter(country_iso3 == "EU")
+
+# Plot
+visa_scatter.fig <- ggplot(visa_degree.df, aes(x = outdegree, y = indegree)) +
   geom_point(color = "grey") +
   geom_point(visa_degree.df %>%
                filter(country_iso3 == "EU"), 
              mapping = aes(x = outdegree, y = indegree), color = "red",
              size = 3) +
-  geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+  geom_abline(intercept = 0, slope = 1) +
+  annotate("segment", x = eu_data$outdegree, xend = eu_data$outdegree, 
+            y = eu_data$outdegree, yend = eu_data$indegree, colour = "black", linetype = "dashed") +
+  annotate("text", x = 47, y = 80, 
+           label = paste0(
+             "The EU receives ", eu_data$indegree - eu_data$outdegree, 
+             " more\nvisa waivers than it provides."), 
+           hjust = 0, family = "Garamond", size = 5) +
   scale_x_continuous(limits = c(0, 100)) +
   scale_y_continuous(limits = c(0, 100)) +
   labs(x = "Visa Freedom (sent)", y = "Visa freedom (received)", title = "Visa Freedom, 2020", 
-       caption = "Data: Visa Network Data (2020)") +
-  theme_minimal()
+       caption = "Data: ICTS Europe Systems (2020)") +
+  theme_basic
 
 # Plot network of EU visa agreements
 ### ------------------------------------------------------------------------ ###
@@ -116,3 +140,11 @@ ggraph(graph = graph.df, layout = "manual", x = x, y = y) +
                      sep = unit(5, "mm")) +
   scale_fill_manual(values = c("#f0f0f0", "#636363", "#cccccc")) +
   theme_graph()
+
+# Export
+### ------------------------------------------------------------------------ ###
+ggsave(
+  plot = visa_scatter.fig, "./figures/Fig 2 - VisaScatter.tiff", 
+  width = 10, height = 6, unit = "in",
+  dpi = 300
+)
