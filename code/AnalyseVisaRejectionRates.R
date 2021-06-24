@@ -7,6 +7,15 @@
 if (!require("xfun")) install.packages("xfun")
 pkg_attach2("tidyverse", "rio", "fs", "countrycode", "sf")
 
+# theme
+theme_basic <- theme_minimal() +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    text = element_text(size = 16, family = "Garamond"),
+    axis.ticks.x = element_line(size = .5),
+  )
+
 # Load data
 ### ------------------------------------------------------------------------ ###
 visa_rejection.df <- import("./data/visa_rejection_2015-2020.rds") %>%
@@ -81,7 +90,7 @@ rejection_rate.fig <- ggplot(world.shp) +
   coord_sf(xlim = c(-155, 165), ylim = c(-50, 75)) +
   scale_fill_manual(values = c(RColorBrewer::brewer.pal(6, "OrRd"), "#a1d99b", "#e0e0e0", "#1a1a1a")) +
   guides(fill = guide_legend("Rejection rate")) +
-  theme_void() 
+  theme_void(base_family = "Garamond", base_size = 16)
 
 # Mean rejection rate by world region 
 ### ------------------------------------------------------------------------ ###
