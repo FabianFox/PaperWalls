@@ -76,8 +76,9 @@ world.shp <- world.shp %>%
                                               "No data")))
 # Plot
 ### ------------------------------------------------------------------------ ###
-ggplot(world.shp) +
+rejection_rate.fig <- ggplot(world.shp) +
   geom_sf(aes(fill = rejection_rate_cat), lwd = 0.1) +
+  coord_sf(xlim = c(-155, 165), ylim = c(-50, 75)) +
   scale_fill_manual(values = c(RColorBrewer::brewer.pal(6, "OrRd"), "#a1d99b", "#e0e0e0", "#1a1a1a")) +
   guides(fill = guide_legend("Rejection rate")) +
   theme_void() 
@@ -116,3 +117,11 @@ region_rejection_rate.fig <- ggplot(mean_rejection.df,
   scale_y_continuous(labels = function(x)paste0(x*100, "%")) +
   labs(x = "", y = "Rejection rate") +
   theme_minimal()
+
+# Export
+### ------------------------------------------------------------------------ ###
+ggsave(
+  plot = rejection_rate.fig, "./figures/Fig 3 - RejectionRate.tiff", 
+  width = 12, height = 7, unit = "in",
+  dpi = 300
+)
