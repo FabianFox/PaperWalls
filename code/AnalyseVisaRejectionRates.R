@@ -117,20 +117,26 @@ region_rejection_rate.fig <- ggplot(mean_rejection.df,
   geom_hline(aes(yintercept = global_mean_rejection_rate), color = "black", 
              size = 0.6, linetype = "dashed") +
   annotate("text", x = 1, y = 0.217, label = "Global mean", 
-           vjust = 0.5, hjust = 0) +
+           vjust = 0.5, hjust = 0, family = "Garamond", size = 5) +
   annotate("segment", x = 0.75, xend = 1, y = 0.195, yend = 0.215) +
   annotate("text", x = 5.7, y = 0.28, label = "Regional mean",
-           vjust = 0.5, hjust = 0) +
+           vjust = 0.5, hjust = 0, family = "Garamond", size = 5) +
   annotate("segment", x = 5.9, xend = 5.7, y = 0.262, yend = 0.278) +
   coord_flip() +
   scale_y_continuous(labels = function(x)paste0(x*100, "%")) +
   labs(x = "", y = "Rejection rate") +
-  theme_minimal()
+  theme_basic
 
 # Export
 ### ------------------------------------------------------------------------ ###
 ggsave(
   plot = rejection_rate.fig, "./figures/Fig 3 - RejectionRate.tiff", 
   width = 12, height = 7, unit = "in",
+  dpi = 300
+)
+
+ggsave(
+  plot = region_rejection_rate.fig, "./figures/Fig 4 - RejectionRateRegion.tiff", 
+  width = 10, height = 6, unit = "in",
   dpi = 300
 )
