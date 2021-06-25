@@ -129,7 +129,7 @@ world.shp <- world.shp %>%
 graph.df <- graph_from_data_frame(d = edges.df, vertices = nodes.df, directed = TRUE)
 
 # Plot graph and geom_sf
-ggraph(graph = graph.df, layout = "manual", x = x, y = y) +
+visa_waiver_network.fig <- ggraph(graph = graph.df, layout = "manual", x = x, y = y) +
   geom_sf(data = world.shp$geometry,
           aes(fill = factor(world.shp$visa_requirement)), 
           show.legend = FALSE) +
@@ -138,6 +138,7 @@ ggraph(graph = graph.df, layout = "manual", x = x, y = y) +
                      arrow = arrow(type = "closed", 
                                    length = unit(1.5, "mm")),
                      sep = unit(5, "mm")) +
+  coord_sf(xlim = c(-155, 165), ylim = c(-50, 75)) +
   scale_fill_manual(values = c("#f0f0f0", "#636363", "#cccccc")) +
   theme_graph()
 
