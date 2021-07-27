@@ -29,31 +29,20 @@ visa_reject.df <- files.df %>%
   mutate(data = map(data, ~.x %>%
                       select(2:4, 6:8) %>%
                       set_names(c("country", "applications", "issued", 
-                                      "issued_ltv", "not_issued", "rejection_rate")) %>%
+                                  "issued_ltv", "not_issued", "rejection_rate")) %>%
                       mutate(across(where(is.character), str_to_title),
                              country_iso3 = countrycode(country, 
                                                         "country.name.en", 
                                                         "iso3c", 
-                                                        custom_match = c("Kosovo" = "XKX",
+                                                        custom_match = c("Kosovo" = "RKS",
                                                                          "Grand Total" = "Total")))))
 
 # Join datasets, unnest, clean
 ### ------------------------------------------------------------------------ ###
-# Data for 2010 - 2020
+# Data for 2015 - 2020
 visa_reject_long.df <- visa_reject.df %>%
-  unnest(data)
-
-# Independent states as defined by Gleditsch & Ward (1999) 
-# data: http://ksgleditsch.com/data-4.html
-# Note: excluding microstates
-# Custom matches, i.e. 347 (Kosovo) = XKX
-custom.match <- c("260" = "DEU" ,"340" = "SRB", "347" = "XKX", "678" = "YEM")
-
-# Data
-states.df <- gwstates %>%
-  filter(year(end) == 9999 & microstate == FALSE) %>%
-  mutate(iso3c = countrycode(gwcode, "cown", "iso3c",     # original ISO3 is out-of-date
-                             custom_match = custom.match))
+  unnest(data) %>%
+  filter(!country == "Grand Total")
 
 # Subset to countries that implemented the Schengen Agreement
 # created in: GetSchengenMembership.R
@@ -64,19 +53,18 @@ schengen.df <- import("./data/SchengenMembership.rds")
 visa_reject_long.df <- visa_reject_long.df %>%
   filter(!country_iso3 %in% schengen.df$iso3_state)
   
-# Subset to core states
-visa_reject_long.df <- visa_reject_long.df %>% 
-  filter(country_iso3 %in% states.df$iso3c)
-
 # Continents and regions
 visa_reject_long.df <- visa_reject_long.df %>%
   mutate(continent = countrycode(country_iso3,
                                  "iso3c", "continent", 
-                                 custom_match = c("XKX" = "Europe", "MKD" = "Europe")),
+                                 custom_match = c("RKS" = "Europe", 
+                                                  "MKD" = "Europe", 
+                                                  "VAT" = "Europe")),
          region = countrycode(country_iso3, "iso3c", "region",
-                              custom_match = c("XKX" = "Europe & Central Asia",
+                              custom_match = c("RKS" = "Europe & Central Asia",
                                                "MKD" = "Europe & Central Asia",
-                                               "TWN" = "East Asia & Pacific")))
+                                               "TWN" = "East Asia & Pacific",
+                                               "VAT" = "Europe")))
 
 # Export
 ### ------------------------------------------------------------------------ ###
