@@ -12,7 +12,8 @@ pkg_attach2("tidyverse", "rio", "janitor", "fs", "countrycode")
 ### ------------------------------------------------------------------------ ###
 visa.df <- import("./data/VWP_07_2020.RDS") %>%
   mutate(requirement = flatten_chr(requirement)) %>%
-  ungroup()
+  ungroup() %>%
+  filter(destination_iso3 != "XKX")
 
 # Data cleaning
 ### ------------------------------------------------------------------------###
