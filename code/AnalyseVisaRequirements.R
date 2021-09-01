@@ -18,7 +18,9 @@ theme_basic <- theme_minimal() +
 # Load data
 ### ------------------------------------------------------------------------ ###
 # Visa requirements
-visa.df <- import("./data/visa_requirements_2020.rds")
+visa.df <- import("./data/visa_requirements_2020.rds") %>%
+  filter(!destination_iso3 %in% c("TUV"), 
+         !nationality_iso3 %in% c("TUV"))
 
 # created in: GetSchengenMembership.R
 schengen.df <- import("./data/SchengenMembership.rds")
@@ -80,7 +82,7 @@ world.shp <- world.shp %>%
     eu = case_when(
       iso_a3_eh %in% schengen.df$iso3_state ~ "EU",
       sovereignt == "Norway" ~ "EU",
-      sovereignt == "Kosovo" ~ "XKX",
+      sovereignt == "Kosovo" ~ "RKS",
       TRUE ~ iso_a3_eh
     )) %>%
   group_by(eu) %>% 
